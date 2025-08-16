@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player</title>
+    <!-- Third-party libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        :root {
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --accent-color: #ff5b79;
+            --ui-background: rgba(0, 0, 0, 0.1);
+            --ui-background-light: rgba(255, 255, 255, 0.1);
+            --shadow-color: rgba(0, 0, 0, 0.25);
+            --wave-color: #a0a0b0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            background-image: none;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            transition: background 1s ease-in-out;
+            padding-bottom: 160px; /* Space for control bar */
+        }
+
+        .player-container {
+            width: 90%;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: center;
+            justify-items: center;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .player-container {
+               margin-top: -50px;
+            }
+        }
+
+        .album-art-container {
+            width: 500px;
+            height: 500px;
+            border-radius: 15px;
+            overflow: hidden;
+            justify-self: center;
+            box-shadow: 0 20px 60px 10px var(--shadow-color);
+            transition: box-shadow 0.5s ease-in-out;
+        }
+
+        #albumArt {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+            box-shadow: 0 24px 60px 0 var(--shadow-color);
+        }
+        
+        .album-art-container:hover #albumArt {
+            transform: scale(1.05);
+        }
+
+        .title-container {
+            padding: 0;
+            margin-top: 1rem;
+        }
+
+        #trackTitle {
+            font-size: 2rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin: 0;
+        }
+
+        #trackArtist {
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+        
+        .bottom-control-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #1a1a1a;
+            padding: 1rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-visualizer-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        #waveform {
+            width: 100%;
+            height: 60px;
+            cursor: pointer;
+        }
+        
+        .time-stamps {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .controls-container {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .control-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-primary);
+            padding: 0;
+        }
+        
+        .control-button svg {
+            width: 24px;
+            height: 24px;
+            filter: drop-shadow(0 2px 4px var(--shadow-color));
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+
+        .control-button:hover svg {
+            transform: scale(1.1);
+            color: var(--accent-color);
+        }
+
+        #playPauseBtn {
+            width: 50px;
+            height: 50px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.5s ease-in-out;
+        }
+        
+        #playPauseBtn svg {
+            width: 28px;
+            height: 28px;
+            filter: none;
+        }
+        
+        #playPauseBtn:hover {
+            transform: scale(1.05);
+        }
+
+
+        .hidden {
+            display: none;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        #volumeSlider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100px;
+            height: 5px;
+            background: var(--ui-background-light);
+            border-radius: 5px;
+            outline: none;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+
+        #volumeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: var(--text-primary);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        #volumeSlider::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            background: var(--text-primary);
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="player-container">
+        <div class="album-art-container">
+            <img id="albumArt" src="https://placehold.co/200x200/000000/ffffff?text=Loading..." alt="Album Art" crossorigin="anonymous">
+        </div>
+
+        
+
+        <div class="title-container">
+            <h1 id="trackTitle">Loading...</h1>
+            <p id="trackArtist">Please start the server</p>
+        </div>
+
+
+                <div class="progress-visualizer-container">
+             <div id="waveform"></div>
+             <div class="time-stamps">
+                <span id="currentTime">0:00</span>
+                <span id="totalDuration">0:00</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="bottom-control-bar">
+
+        <div class="controls-container">
+            <button class="control-button" id="prevBtn" title="Previous">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+            </button>
+
+            <button class="control-button" id="playPauseBtn" title="Play">
+                <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            </button>
+
+            <button class="control-button" id="nextBtn" title="Next">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+            </button>
+            
+            <div class="volume-container">
+                <button class="control-button" id="muteBtn" title="Mute">
+                     <svg id="volumeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                     <svg id="muteIcon" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+                </button>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
+            </div>
+        </div>
+    </div>
+
+
+    <!-- The hidden audio element that WaveSurfer will control -->
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const audioPlayer = document.getElementById('audioPlayer');
+            const albumArt = document.getElementById('albumArt');
+            const trackTitle = document.getElementById('trackTitle');
+            const trackArtist = document.getElementById('trackArtist');
+            const currentTimeEl = document.getElementById('currentTime');
+            const totalDurationEl = document.getElementById('totalDuration');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const playIcon = document.getElementById('playIcon');
+            const pauseIcon = document.getElementById('pauseIcon');
+            const nextBtn = document.getElementById('nextBtn');
+            const prevBtn = document.getElementById('prevBtn');
+            const muteBtn = document.getElementById('muteBtn');
+            const volumeIcon = document.getElementById('volumeIcon');
+            const muteIcon = document.getElementById('muteIcon');
+            const volumeSlider = document.getElementById('volumeSlider');
+            
+            const colorThief = new ColorThief();
+            const API_BASE_URL = 'http://127.0.0.1:5000';
+
+            // --- State ---
+            let songs = [];
+            let currentSongIndex = 0;
+
+            // --- WaveSurfer Initialization ---
+            const wavesurfer = WaveSurfer.create({
+                container: '#waveform',
+                waveColor: getComputedStyle(document.documentElement).getPropertyValue('--wave-color'),
+                progressColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-color'),
+                height: 60,
+                barWidth: 3,
+                barGap: 2,
+                barRadius: 2,
+                cursorWidth: 0,
+                media: audioPlayer,
+
+                // Important
+                normalize: true,   // rescales peaks
+                barHeight: 0.8,    // scale down amplitude visually
+            });
+
+            // --- Functions ---
+
+            /**
+             * Shuffles an array in-place using the Fisher-Yates algorithm.
+             * @param {Array} array The array to shuffle.
+             */
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            /**
+             * Fetches the list of songs from the Flask server.
+             */
+            async function fetchSongs() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/songs`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    songs = await response.json();
+                    if (songs.length > 0) {
+                        shuffleArray(songs); // Shuffle the playlist
+                        loadSong(currentSongIndex);
+                    } else {
+                        trackTitle.textContent = "No Songs Found";
+                        trackArtist.textContent = "Add songs to the 'music' directory";
+                    }
+                } catch (error) {
+                    console.error("Could not fetch songs:", error);
+                    trackTitle.textContent = "Error";
+                    trackArtist.textContent = "Could not connect to the server.";
+                }
+            }
+
+            /**
+             * Loads a song by its index in the songs array.
+             * @param {number} songIndex - The index of the song to load.
+             */
+            function loadSong(songIndex) {
+                const song = songs[songIndex];
+                trackTitle.textContent = song.title;
+                trackArtist.textContent = song.artist;
+                albumArt.src = `${API_BASE_URL}${song.albumArt}`;
+                wavesurfer.load(`${API_BASE_URL}${song.src}`);
+            }
+            
+            /**
+             * Updates the UI colors based on the album art.
+             */
+            function updateThemedColors() {
+                if (albumArt.complete && albumArt.naturalWidth > 0) {
+                    try {
+                        const dominantColor = colorThief.getColor(albumArt);
+                        const [r, g, b] = dominantColor;
+                        
+                        const accentColor = `rgb(${r}, ${g}, ${b})`;
+                        const shadowColor = `rgba(${r}, ${g}, ${b}, 0.5)`;
+
+                        document.documentElement.style.setProperty('--accent-color', accentColor);
+                        document.documentElement.style.setProperty('--shadow-color', shadowColor);
+                        
+                        wavesurfer.setOptions({ progressColor: accentColor });
+
+                    } catch (error) {
+                        console.error('Error getting color from image:', error);
+                        document.documentElement.style.setProperty('--accent-color', '#ff5b79');
+                        document.documentElement.style.setProperty('--shadow-color', 'rgba(0, 0, 0, 0.25)');
+                    }
+                } else {
+                    albumArt.addEventListener('load', updateThemedColors, { once: true });
+                }
+            }
+
+            function nextSong() {
+                currentSongIndex = (currentSongIndex + 1) % songs.length;
+                loadSong(currentSongIndex);
+            }
+
+            function prevSong() {
+                currentSongIndex = (currentSongIndex - 1 + songs.length) % songs.length;
+                loadSong(currentSongIndex);
+            }
+            
+            function toggleMute() {
+                wavesurfer.toggleMute();
+            }
+
+            function updateVolumeUI() {
+                const isMuted = wavesurfer.getMuted();
+                const volume = wavesurfer.getVolume();
+                const effectivelyMuted = isMuted || volume === 0;
+
+                volumeIcon.classList.toggle('hidden', effectivelyMuted);
+                muteIcon.classList.toggle('hidden', !effectivelyMuted);
+                muteBtn.setAttribute('title', isMuted ? 'Unmute' : 'Mute');
+                volumeSlider.value = isMuted ? 0 : volume;
+            }
+
+            /**
+             * Formats time in seconds to a "minutes:seconds" string.
+             * @param {number} seconds - The time in seconds.
+             * @returns {string} The formatted time string.
+             */
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+
+            // --- Event Listeners ---
+            playPauseBtn.addEventListener('click', () => wavesurfer.playPause());
+            nextBtn.addEventListener('click', nextSong);
+            prevBtn.addEventListener('click', prevSong);
+            muteBtn.addEventListener('click', toggleMute);
+            albumArt.addEventListener('load', updateThemedColors);
+            
+            volumeSlider.addEventListener('input', (e) => {
+                wavesurfer.setVolume(Number(e.target.value));
+                wavesurfer.setMuted(false);
+            });
+
+            // --- WaveSurfer Event Listeners ---
+            wavesurfer.on('play', () => {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            });
+            
+            wavesurfer.on('pause', () => {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            });
+
+            wavesurfer.on('timeupdate', (currentTime) => {
+                currentTimeEl.textContent = formatTime(currentTime);
+            });
+            
+            wavesurfer.on('volume', updateVolumeUI);
+            wavesurfer.on('mute', updateVolumeUI);
+
+            wavesurfer.on('ready', (duration) => {
+                totalDurationEl.textContent = formatTime(duration);
+                updateVolumeUI();
+                if (playIcon.classList.contains('hidden')) {
+                    wavesurfer.play();
+                }
+            });
+
+            wavesurfer.on('finish', () => {
+                nextSong();
+            });
+            
+            // --- Initial Load ---
+            fetchSongs();
+        });
+    </script>
+</body>
+</html>
+
