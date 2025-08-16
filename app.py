@@ -99,4 +99,4 @@ if __name__ == '__main__':
     # |- music/
     #    |- Camellia - Versus!.mp3
     #    |- Another Artist - Another Song.mp3
-    app.run(debug=True, port=3333, host='0.0.0.0')
+    app.run(debug=True, port=3333)
